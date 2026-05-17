@@ -39,7 +39,9 @@ cp ../../target-root/usr/lib/libavutil.so.56    $TARGET_DIR/usr/local/lib-ltntst
 cp ../../target-root/usr/lib/libavcodec.so.58   $TARGET_DIR/usr/local/lib-ltntstools/libavcodec.so.58
 cp ../../target-root/usr/lib/libswresample.so.3 $TARGET_DIR/usr/local/lib-ltntstools/libswresample.so.3
 cp ../../target-root/usr/lib/libswscale.so.5    $TARGET_DIR/usr/local/lib-ltntstools/libswscale.so.5
+if [ -f ../../target-root/usr/lib/libntt.so.0 ]; then
 cp ../../target-root/usr/lib/libntt.so.0        $TARGET_DIR/usr/local/lib-ltntstools/libntt.so.0
+fi
 
 pushd $TARGET_DIR/usr/local/bin
 	for BIN in `./tstools_util | grep ^tstools`
