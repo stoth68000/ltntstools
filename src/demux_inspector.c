@@ -175,6 +175,7 @@ static int pes_contains_start_of_aac_sync(const struct ltn_pes_packet_s *pes)
 
 static void pes_item_nals_dump(struct pes_item_s *item)
 {
+	return; // Don't be too chatty, but keep the func for when we need it
 	for (int i = 0; i < item->nalArrayLength; i++) {
 		struct ltn_nal_headers_s *nal = &item->nals[i];
 		printf(" nal: %02x [%s]\n", nal->nalType, nal->nalName);
@@ -339,7 +340,7 @@ static void pes_item_dump(struct pes_item_s *item)
 	}
 	printf("\n");
 
-	//pes_item_nals_dump(item);
+	pes_item_nals_dump(item);
 
 }
 /* End -- Misc pes function - find a better home for these. */
