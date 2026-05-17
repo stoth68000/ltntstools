@@ -96,7 +96,7 @@ static void *sm_cb_pos(void *userContext, uint64_t pos, uint64_t max, double pct
 	struct tool_ctx_s *ctx = userContext;
 	ctx->fileLoopPct = pct;
 	printf("Complete: %6.2f%%\r", pct);
-	fflush(0);
+	fflush(stdout);
 
 	if (pct >= 100.0L && ctx->fileLoops == 0) {
 		/* Shutdown the playout. */
@@ -143,7 +143,7 @@ static void _usage(const char *prog)
 	printf("  -l loop file endlessly. [def: no]\n");
 	printf("  -v increase verbosity level, level 1 and 2 produce udp playout histograms\n");
 	printf("  -o srt://host:port [mandatory]\n");
-	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]");
+	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]\n");
 	printf("  -s <srt streamid> [optional]\n");
 }
 
@@ -217,7 +217,10 @@ int srt_transmit(int argc, char* argv[])
 	printf("\nStream Encryption : %s\n", ctx->passPhrase ? "on" : "off");
 	printf("   Stream Path/ID : %s\n", ctx->streamId ? ctx->streamId : "<disabled>");
 
-	ltn_histogram_alloc_video_defaults(&ctx->h, "SRT transmit intervals");
+	if (ltn_histogram_alloc_video_defaults(&ctx->h, "SRT transmit intervals") < 0) {
+		fprintf(stderr, "Unable to allocate histogram, aborting.\n");
+		exit(1);
+	}
 
 	/* See
 	 * https://github.com/hwangsaeul/libsrt/blob/master/docs/API.md#setup-and-teardown
@@ -225,7 +228,10 @@ int srt_transmit(int argc, char* argv[])
 	srt_startup();
 
 	/* Setup the srt outbound connection */
-	tool_srt_reopen(ctx);
+	if (tool_srt_reopen(ctx) < 0) {
+		fprintf(stderr, "Unable to establish initial SRT connection, aborting.\n");
+		exit(1);
+	}
 
 	/* Configure the rate controlled TS framework */
 	struct ltntstools_source_rcts_callbacks_s sm_callbacks = { 0 };
