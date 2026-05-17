@@ -388,7 +388,7 @@ static int open_codec_context(int *stream_idx,
 static int get_format_from_sample_fmt(const char **fmt,
                                       enum AVSampleFormat sample_fmt)
 {
-    int i;
+    uint64_t i;
     struct sample_fmt_entry {
         enum AVSampleFormat sample_fmt; const char *fmt_be, *fmt_le;
     } sample_fmt_entries[] = {
