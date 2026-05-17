@@ -226,7 +226,7 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
   tstools_clock_inspector: Added -Z to supress NEW timing violation messages
   tstools_clock_inspector: Added -L to optional product PTS to SCR linear trending report.
 
-* Wed Aug 20 2024 Steven Toth <steven.toth@ltnglobal.com> 
+* Tue Aug 20 2024 Steven Toth <steven.toth@ltnglobal.com> 
 - v1.31.1
   tstools_nic_monitor: bugfix. Curl http post mechanism would leak sockets
   tstools_tr101290_analyzer: Added PCAP support
@@ -424,7 +424,6 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
   tstools_asi2ip: Fix compiler new compiler warnings re set but unused vars
   tstools_ffmpeg_metadata: Fix new compiler warning re signed vs unused usage. Removed unused signal handler
 
-%changelog
 * Thu Sep  1 2022 Steven Toth <steven.toth@ltnglobal.com> 
 - v1.16.0
   tstools_nic_monitor: Feature. Added support for an SRT input urls, monitor an SRT feed. -i srt://1.2.3.4:5678
