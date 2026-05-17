@@ -33,6 +33,7 @@ struct tool_ctx_s
 	char *streamId;
 	char hostname[96];
 	int port;
+	int latency_ms;
 	struct hostent *he;
 	SRT_TRACEBSTATS stats;
 };
@@ -70,6 +71,9 @@ static int tool_srt_reopen(struct tool_ctx_s *ctx)
 	}
 	if (ctx->passPhrase) {
 		srt_setsockflag(ctx->skt, SRTO_PASSPHRASE, ctx->passPhrase, strlen(ctx->passPhrase));
+	}
+	if (ctx->latency_ms > 0) {
+		srt_setsockflag(ctx->skt, SRTO_LATENCY, &ctx->latency_ms, sizeof(ctx->latency_ms));
 	}
 
 	/* Don't linger and block when _close is called, do an immediate terminate. */
@@ -145,6 +149,7 @@ static void _usage(const char *prog)
 	printf("  -o srt://host:port [mandatory]\n");
 	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]\n");
 	printf("  -s <srt streamid> [optional]\n");
+	printf("  -t <latency_ms> SRT latency in milliseconds [optional]\n");
 }
 
 int srt_transmit(int argc, char* argv[])
@@ -155,7 +160,7 @@ int srt_transmit(int argc, char* argv[])
 
 	int ch;
 
-	while ((ch = getopt(argc, argv, "?hi:vlo:p:s:")) != -1) {
+	while ((ch = getopt(argc, argv, "?hi:vlo:p:s:t:")) != -1) {
 		switch(ch) {
 		case 'i':
 			if (ctx->filename)
@@ -198,6 +203,13 @@ int srt_transmit(int argc, char* argv[])
 				free(ctx->streamId);
 			ctx->streamId = strdup(optarg);
 			break;
+		case 't':
+			ctx->latency_ms = atoi(optarg);
+			if (ctx->latency_ms < 0) {
+				fprintf(stderr, "Latency must be non-negative, aborting.\n");
+				exit(1);
+			}
+			break;
 		case 'v':
 			ctx->verbose++;
 			break;
@@ -209,13 +221,21 @@ int srt_transmit(int argc, char* argv[])
 		}
 	}
 
+	if (ctx->filename == 0) {
+		_usage(argv[0]);
+		fprintf(stderr, "\n-i is mandatory, aborting\n\n");
+		exit(1);
+	}
+
 	if (ctx->port == 0) {
-		fprintf(stderr, "-o srt://host:port is mandatory, aborting\n");
+		_usage(argv[0]);
+		fprintf(stderr, "\n-o srt://host:port is mandatory, aborting\n\n");
 		exit(1);
 	}
 
 	printf("\nStream Encryption : %s\n", ctx->passPhrase ? "on" : "off");
 	printf("   Stream Path/ID : %s\n", ctx->streamId ? ctx->streamId : "<disabled>");
+	printf("         Latency : %d ms\n", ctx->latency_ms > 0 ? ctx->latency_ms : 0);
 
 	if (ltn_histogram_alloc_video_defaults(&ctx->h, "SRT transmit intervals") < 0) {
 		fprintf(stderr, "Unable to allocate histogram, aborting.\n");
