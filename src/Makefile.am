@@ -33,7 +33,7 @@ if APPLE
 #AM_CFLAGS += ../../target-root/usr/lib/libjson-c.a
 endif
 LDADD += -L../../target-root/usr/lib -ldvbpsi
-LDADD += -L../../target-root/usr/lib -lavformat -lavutil -lz -lavcodec -lswresample -lswscale -lavutil -lbz2
+LDADD += -L../../target-root/usr/lib -lavformat -lavutil -lz -lavcodec -lswresample -lswscale -lavutil
 LDADD += -lpcap -llzma
 LDADD += -lklscte35 -ldl
 LDADD += -lsrt -lcrypto
