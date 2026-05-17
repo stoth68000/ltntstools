@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <sys/time.h>
 
 #include <libltntstools/ltntstools.h>
 #include "ffmpeg-includes.h"
@@ -14,6 +15,7 @@
 #include "utils.h"
 
 static int g_running = 0;
+static volatile sig_atomic_t stats_timer_expired = 0;
 
 struct tool_ctx_s
 {
@@ -41,6 +43,11 @@ struct tool_ctx_s
 static void signal_handler(int signum)
 {
 	g_running = 0;
+}
+
+static void stats_timer_handler(int signum)
+{
+	stats_timer_expired = 1;
 }
 
 static void tool_srt_close(struct tool_ctx_s *ctx)
@@ -149,7 +156,10 @@ static void _usage(const char *prog)
 	printf("  -o srt://host:port [mandatory]\n");
 	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]\n");
 	printf("  -s <srt streamid> [optional]\n");
-	printf("  -t <latency_ms> SRT latency in milliseconds [optional]\n");
+	printf("  -t <latency_ms> SRT latency in milliseconds [optional]\n\n");
+	printf("     Eg. -i tsfile.ts -o srt://server:port -s <streamid>\n");
+
+	
 }
 
 int srt_transmit(int argc, char* argv[])
@@ -266,13 +276,20 @@ int srt_transmit(int argc, char* argv[])
 
 	/* Sit in a loop, waiting for a ctrl-c signal, or for playout to naturally stop */
 	signal(SIGINT, signal_handler);
+	signal(SIGALRM, stats_timer_handler);
+
+	/* Setup periodic timer for statistics reporting (every 5 seconds) */
+	struct itimerval timer = { 0 };
+	timer.it_value.tv_sec = 5;
+	timer.it_interval.tv_sec = 5;
+	setitimer(ITIMER_REAL, &timer, NULL);
+
 	g_running = 1;
-	int timeout = 2000;
 	while (g_running) {
-		usleep(50 * 1000);
-		timeout -= 50;
-		if (timeout < 0) {
-			timeout = 5000;
+		usleep(100 * 1000);  /* 100ms sleep, interrupted by SIGALRM */
+
+		if (stats_timer_expired) {
+			stats_timer_expired = 0;
 
 			/* https://github.com/hwangsaeul/libsrt/blob/master/docs/statistics.md#mbpsSendRate */
 			if (srt_bistats(ctx->skt, &ctx->stats, 0, 1) == 0) {
@@ -286,6 +303,11 @@ int srt_transmit(int argc, char* argv[])
 			}
 		}
 	}
+
+	/* Cleanup: stop the timer */
+	memset(&timer, 0, sizeof(timer));
+	setitimer(ITIMER_REAL, &timer, NULL);
+
 	printf("\n");
 
 	/* Teardown */
