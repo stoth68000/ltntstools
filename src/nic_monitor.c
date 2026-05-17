@@ -1654,9 +1654,12 @@ static int processArguments(struct tool_context_s *ctx, int argc, char *argv[])
 					fprintf(stderr, "\nError parsing forwarding url, check syntax. Must be udp://a.b.c.d:port\n");
 					exit(1);
 				}
-				sprintf(&ctx->url_forwards[forwarder_idx].uilabel[0], "%s:%d",
+				char tmp[sizeof(ctx->url_forwards[forwarder_idx].uilabel)];
+				snprintf(tmp, sizeof(tmp), "%s:%d",
 					ctx->url_forwards[forwarder_idx].addr,
 					ctx->url_forwards[forwarder_idx].port);
+
+				snprintf(ctx->url_forwards[forwarder_idx].uilabel, sizeof(ctx->url_forwards[forwarder_idx].uilabel), "%s", tmp);
 				forwarder_idx++;
 				break;
 			case 21: /* measure-scheduling-quanta */
