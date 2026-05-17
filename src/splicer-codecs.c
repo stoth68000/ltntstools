@@ -85,7 +85,7 @@ struct timing_item_s *timing_item_alloc(struct pes_item_s *item)
     if (!item->pes)
         return NULL;
 
-	struct timing_item_s *ti = calloc(1, sizeof(*ti));
+    struct timing_item_s *ti = calloc(1, sizeof(*ti));
     if (ti) {
         ti->arrivalSTC    = item->arrivalSTC;
         ti->outputSTC     = item->outputSTC;
