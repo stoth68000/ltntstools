@@ -72,7 +72,7 @@ static int tool_srt_reopen(struct tool_ctx_s *ctx)
 		srt_setsockflag(ctx->skt, SRTO_PASSPHRASE, ctx->passPhrase, strlen(ctx->passPhrase));
 	}
 
-	/* Don't linger and block when _clsoe is called, do an immediate terminate. */
+	/* Don't linger and block when _close is called, do an immediate terminate. */
 	uint32_t v = 0;
 	srt_setsockflag(ctx->skt, SO_LINGER, &v, sizeof(v));
 
