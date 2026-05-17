@@ -293,13 +293,14 @@ int srt_transmit(int argc, char* argv[])
 
 			/* https://github.com/hwangsaeul/libsrt/blob/master/docs/statistics.md#mbpsSendRate */
 			if (srt_bistats(ctx->skt, &ctx->stats, 0, 1) == 0) {
-				printf("\nMb/ps: %7.02f\tBytes: %12" PRIu64 "\tRTT: %7.0f\tSendLoss: %8d\tSendDrop: %8d\tRetrans: %8d\n",
+				printf("\nMb/ps: %7.02f\tBytes: %12" PRIu64 "\tRTT: %7.0f\tSendLoss: %8d\tSendDrop: %8d\tRetrans: %8d\tLatency: %5d\n",
 					ctx->stats.mbpsSendRate,
 					ctx->stats.byteSentTotal,
 					ctx->stats.msRTT,
 					ctx->stats.pktSndLossTotal,
 					ctx->stats.pktSndDropTotal,
-					ctx->stats.pktRetransTotal);
+					ctx->stats.pktRetransTotal,
+					ctx->stats.msSndTsbPdDelay);
 			}
 		}
 	}
