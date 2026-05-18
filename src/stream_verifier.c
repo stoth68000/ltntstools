@@ -366,7 +366,13 @@ int stream_verifier(int argc, char *argv[])
 
 				if (ret != 0) {
 					badMatches++;
-					printf("\rExpected %" PRIu64 " found %"PRIu64 ", %" PRIu64 " bad packets\n", lastCounter, currentCounter, badMatches);
+
+					time_t now = time(NULL);
+					char ts[64];
+					sprintf(ts, "%s", ctime(&now));
+					ts[ strlen(ts) - 1] = 0;
+					
+					printf("\r%s: Expected %" PRIu64 " found %"PRIu64 ", %" PRIu64 " bad packets\n", ts, lastCounter, currentCounter, badMatches);
 				}
 				lastCounter = currentCounter;
 			}
