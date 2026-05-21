@@ -1,7 +1,10 @@
-
+#include <stdio.h>
 #include <libltntstools/ltntstools.h>
 #include <unistd.h>
 #include <libavformat/avformat.h>
+#include <libavutil/frame.h>
+#include <libavutil/samplefmt.h>
+#include <libswresample/swresample.h>
 #include <libavutil/dict.h>
 #include <libavutil/fifo.h>
 
@@ -140,7 +143,9 @@ static void _compute_dbFS_fltp(struct ltntstools_audioanalyzer_stream_s *stream,
         p++;
     }
 
+#if 0
 printf("x %f\n", x);
+#endif
     stream->pcm[channelNr].pcm_dbFS = 20 * log10(abs(x));
 
     if (isinf(stream->pcm[channelNr].pcm_dbFS)) {
@@ -148,7 +153,7 @@ printf("x %f\n", x);
     } else {
         sprintf((char *)stream->pcm[channelNr].pcm_dbFSDescription, "% 04.02f", stream->pcm[channelNr].pcm_dbFS);
     }
-#if 1
+#if 0
     printf("FLPT pid 0x%04x/ch#%d: %s\n", stream->pid, channelNr, stream->pcm[channelNr].pcm_dbFSDescription);
 #endif
 }
@@ -170,6 +175,72 @@ static void compute_dbFS(struct ltntstools_audioanalyzer_stream_s *stream, int c
     default:
         break;
     }
+}
+
+static AVFrame *convert_frame_fltp_to_s16p(const AVFrame *src)
+{
+    int ret;
+
+    if (src->format != AV_SAMPLE_FMT_FLTP) {
+        fprintf(stderr, "Source frame is not FLTP\n");
+        return NULL;
+    }
+
+    AVFrame *dst = dst = av_frame_alloc();
+    if (!dst)
+        return NULL;
+
+    dst->format         = AV_SAMPLE_FMT_S16P;
+    dst->sample_rate    = src->sample_rate;
+    dst->channels       = src->channels;
+    dst->channel_layout = src->channel_layout;
+    dst->nb_samples     = src->nb_samples;
+
+    ret = av_frame_get_buffer(dst, 0);
+    if (ret < 0) {
+        fprintf(stderr, "av_frame_get_buffer failed\n");
+        goto fail;
+    }
+
+    SwrContext *swr = swr_alloc_set_opts(NULL,
+        /* output */
+        dst->channel_layout, AV_SAMPLE_FMT_S16P, dst->sample_rate,
+        /* input */
+        src->channel_layout, AV_SAMPLE_FMT_FLTP, src->sample_rate,
+        0,
+        NULL
+    );
+
+    if (!swr) {
+        fprintf(stderr, "swr_alloc_set_opts failed\n");
+        goto fail;
+    }
+
+    ret = swr_init(swr);
+    if (ret < 0) {
+        fprintf(stderr, "swr_init failed\n");
+        goto fail;
+    }
+
+    ret = swr_convert(swr, dst->data, dst->nb_samples, (const uint8_t **)src->data, src->nb_samples);
+    if (ret < 0) {
+        fprintf(stderr, "swr_convert failed\n");
+        goto fail;
+    }
+
+    dst->nb_samples = ret;
+
+    swr_free(&swr);
+
+    return dst;
+
+fail:
+    swr_free(&swr);
+
+    if (dst)
+        av_frame_free(&dst);
+
+    return NULL;
 }
 
 static void decode(struct ltntstools_audioanalyzer_ctx_s *ctx, struct ltntstools_audioanalyzer_stream_s *stream)
@@ -233,10 +304,15 @@ static void decode(struct ltntstools_audioanalyzer_ctx_s *ctx, struct ltntstools
                 /* Measure dbFS across every PCM channel, this is planer so the samples are just a massive array. */
                 compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
             }
-        } else
-        if (stream->sampleFormat == AV_SAMPLE_FMT_S16P) {
-            /* Stereo planes */
-            for (int ch = 0; ch < stream->decoded_frame->channels; ch++) {
+        }
+
+        if (stream->sampleFormat == AV_SAMPLE_FMT_FLTP) {
+            /* Stereo planes for neilsen, in S16p format. Convert the audio. */
+
+            AVFrame *s16_frame = convert_frame_fltp_to_s16p(stream->decoded_frame);
+            sample_size = av_get_bytes_per_sample(s16_frame->format);
+
+            for (int ch = 0; ch < s16_frame->channels; ch++) {
 #if 0
                 printf("stream->decoded_frame->channels = %d\n", stream->decoded_frame->channels);
                 printf("ch%d planes = %p/%p/%p\n", ch, stream->decoded_frame->data[0], stream->decoded_frame->data[1], stream->decoded_frame->data[2]);
@@ -246,13 +322,15 @@ static void decode(struct ltntstools_audioanalyzer_ctx_s *ctx, struct ltntstools
                 /* We only support stereo with the nielsen SDK */
                 if (stream->enableNielsen && ch < 2) {
                     nielsen_bindings_write_silent(stream->nielsen, 0);
-                    nielsen_bindings_write_plane(stream->nielsen, ch, (uint8_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples * sample_size);
+                    nielsen_bindings_write_plane(stream->nielsen, ch, (uint8_t *)s16_frame->data[ch], s16_frame->nb_samples * sample_size);
                 }
 #endif /* HAVE_IMONITORSDKPROCESSOR_H */
 
                 /* Measure dbFS across every PCM channel, this is planer so the samples are just a massive array. */
-                compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
+                //compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
             }
+
+            av_frame_free(&s16_frame);
         }
 
     }
@@ -358,7 +436,7 @@ int ltntstools_audioanalyzer_stream_add(void *hdl, uint16_t pid, uint8_t streamI
     pid &= 0x1fff;
 
     switch (sampleFormat) {
-    //case AV_SAMPLE_FMT_FLTP:
+    case AV_SAMPLE_FMT_FLTP:
     case AV_SAMPLE_FMT_S16P:
         break;
     default:
