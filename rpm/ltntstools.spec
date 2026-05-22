@@ -66,6 +66,10 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
 
 %changelog
 * Fri May 22 2026 Steven Toth <steven.toth@ltnglobal.com> 
+- v1.39.11
+  tstools_neilsen_inspector: Failed to report correct codecs when decoding MP2/AAC or mixed channels.
+
+* Fri May 22 2026 Steven Toth <steven.toth@ltnglobal.com> 
 - v1.39.9
   tstools_pes_inspector: add feature to serialize PES objects to disk
   tstools_neilsen_inspector: Failed to report correct codecs when decoding AC3.

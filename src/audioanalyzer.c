@@ -298,15 +298,31 @@ static void decode(struct ltntstools_audioanalyzer_ctx_s *ctx, struct ltntstools
             }
         }
 
+        if (stream->sampleFormat == AV_SAMPLE_FMT_S16P) {
+            for (int ch = 0; ch < stream->decoded_frame->channels; ch++) {
+#if HAVE_IMONITORSDKPROCESSOR_H
+                /* Its fairly expensive to compute Nielson, skip it if the user doesn't want it. */
+                /* We only support stereo with the nielsen SDK */
+                if (stream->enableNielsen && ch < 2) {
+                    nielsen_bindings_write_silent(stream->nielsen, 0);
+                    nielsen_bindings_write_plane(stream->nielsen, ch,
+                        (uint8_t *)stream->decoded_frame->data[ch],
+                        stream->decoded_frame->nb_samples * sample_size);
+                }
+#endif /* HAVE_IMONITORSDKPROCESSOR_H */
+
+                /* Measure dbFS across every PCM channel, this is planer so the samples are just a massive array. */
+                compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
+            }
+        } else
         if (stream->sampleFormat == AV_SAMPLE_FMT_FLTP) {
+
             /* Stereo planes */
             for (int ch = 0; ch < stream->decoded_frame->channels; ch++) {
                 /* Measure dbFS across every PCM channel, this is planer so the samples are just a massive array. */
                 compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
             }
-        }
 
-        if (stream->sampleFormat == AV_SAMPLE_FMT_FLTP) {
             /* Stereo planes for neilsen, in S16p format. Convert the audio. */
 
             AVFrame *s16_frame = convert_frame_fltp_to_s16p(stream->decoded_frame);
@@ -327,7 +343,7 @@ static void decode(struct ltntstools_audioanalyzer_ctx_s *ctx, struct ltntstools
 #endif /* HAVE_IMONITORSDKPROCESSOR_H */
 
                 /* Measure dbFS across every PCM channel, this is planer so the samples are just a massive array. */
-                //compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
+                compute_dbFS(stream, ch, (int16_t *)stream->decoded_frame->data[ch], stream->decoded_frame->nb_samples);
             }
 
             av_frame_free(&s16_frame);
