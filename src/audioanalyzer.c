@@ -326,6 +326,12 @@ static void decode(struct ltntstools_audioanalyzer_ctx_s *ctx, struct ltntstools
             /* Stereo planes for neilsen, in S16p format. Convert the audio. */
 
             AVFrame *s16_frame = convert_frame_fltp_to_s16p(stream->decoded_frame);
+            if (!s16_frame) {
+                fprintf(stderr, "Unable to sample convert, failed, stream format %d, frame format %d.\n",
+                    stream->sampleFormat,
+                    stream->decoded_frame->format);
+                return;
+            }
             sample_size = av_get_bytes_per_sample(s16_frame->format);
 
             for (int ch = 0; ch < s16_frame->channels; ch++) {
