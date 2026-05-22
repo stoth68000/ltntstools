@@ -178,6 +178,14 @@ int _nielsen_inspector(int argc, char **argv)
 			printf("%6d ", codec->sample_rate);
 			printf("%8" PRIi64, codec->bit_rate / 1000);
 
+			AVSampleFormat intendedFormat = (AVSampleFormat)codec->format;
+			/* MP2 reports the sample format as fltp, but its future decoded
+			 * samples are S16P.
+			 */
+			if (codec->codec_id == AV_CODEC_ID_MP2 && codec->format == AV_SAMPLE_FMT_FLTP) {
+				intendedFormat = AV_SAMPLE_FMT_S16P;
+			}
+
 			if (ctx->nielsenDetection) {
 				uint8_t streamID;
 				switch (codec->codec_id) {
@@ -194,7 +202,7 @@ int _nielsen_inspector(int argc, char **argv)
 				}
 				/* make a note of which audio pids we want to monitor and their codec types */
 				/* We only support S16P currently, so go ahead and try this... */
-				ret = ltntstools_audioanalyzer_stream_add(ctx->aa, s->id, streamID, codec->codec_id, codec->format, 1 /* Enable Nielsen */);
+				ret = ltntstools_audioanalyzer_stream_add(ctx->aa, s->id, streamID, codec->codec_id, intendedFormat, 1 /* Enable Nielsen */);
 				if (ret != 0) {
 					fprintf(stderr, "WARNING: Unable to add stream to decoder, never good.\n");
 				}
