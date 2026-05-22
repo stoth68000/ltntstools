@@ -65,8 +65,8 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
 #/usr/local/lib-ltntstools/libntt.so.0
 
 %changelog
-* Mon Apr  6 2026 Steven Toth <steven.toth@ltnglobal.com> 
-- v1.39.9 - dev
+* Fri May 22 2026 Steven Toth <steven.toth@ltnglobal.com> 
+- v1.39.9
   tstools_pes_inspector: add feature to serialize PES objects to disk
   tstools_neilsen_inspector: Failed to report correct codecs when decoding AC3.
   tstools_srt_transmit: broken console help page
