@@ -143,7 +143,7 @@ static void _usage(const char *prog)
 	printf("  -l loop file endlessly. [def: no]\n");
 	printf("  -v increase verbosity level, level 1 and 2 produce udp playout histograms\n");
 	printf("  -o srt://host:port [mandatory]\n");
-	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]");
+	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]\n");
 	printf("  -s <srt streamid> [optional]\n");
 }
 
