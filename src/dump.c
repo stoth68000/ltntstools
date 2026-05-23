@@ -67,6 +67,7 @@ char *tstools_GetTypeName(uint8_t type)
     case 0x1B: return "H.264 Video";
     case 0x24: return "H.265 Video";
     case 0x32: return "JPEG-XS Video";
+    case 0x33: return "H.266/VVC Video";
     case 0x81: return "ATSC AC-3 Audio";
     default:
       if (type < 0x80)
