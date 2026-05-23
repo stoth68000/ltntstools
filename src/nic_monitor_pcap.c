@@ -160,6 +160,21 @@ printf("\n");
 		}
 	}
 
+	if ((lengthBytes > 70) && ((lengthBytes - 70) % 188 == 0)) {
+		/* Perfect multiple for moo cow wrapped transport packets */
+		int len = lengthBytes - 70;
+		int offset = 70;
+		if ((len >= (188 * 3)) && (ptr[offset + (188 * 0)] == 0x47) && (ptr[offset + (188 * 1)] == 0x47) && (ptr[offset + (188 * 2)] == 0x47)) {
+			return PAYLOAD_MOO_COWS; /* After 3 sync bytes */
+		}
+		if ((len >= (188 * 2)) && (ptr[offset + (188 * 0)] == 0x47) && (ptr[offset + (188 * 1)] == 0x47)) {
+			return PAYLOAD_MOO_COWS; /* After 2 sync bytes */
+		}
+		if (len >= (188 * 1) && (ptr[offset + (188 * 0)] == 0x47)) {
+			return PAYLOAD_MOO_COWS; /* After 1 sync byte */
+		}
+	}
+
 	if (lengthBytes  == 44) {
 		struct srt_control_pkt_hdr_s *p = (struct srt_control_pkt_hdr_s *)ptr;
 		if (!SRT__IS_DATA_PACKET(p)) {

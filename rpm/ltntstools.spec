@@ -66,8 +66,10 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
 
 %changelog
 * Mon Apr  6 2026 Steven Toth <steven.toth@ltnglobal.com> 
-- v1.39.8 - dev
+- v1.39.9 - dev
   tstools_pes_inspector: add feature to serialize PES objects to disk
+  tstools_neilsen_inspector: Failed to report correct codecs when decoding AC3.
+  tstools_srt_transmit: broken console help page
 
 * Mon Apr  6 2026 Steven Toth <steven.toth@ltnglobal.com> 
 - v1.39.8

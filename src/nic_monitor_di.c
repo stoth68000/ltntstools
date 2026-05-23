@@ -37,6 +37,7 @@ static const char *payloadTypes[] = {
 	"SRT", // TS
 	"SRT", // Control
 	"SRT", // SRT encrypted
+	"MOO", // Moo cows
 };
 
 const char *payloadTypeDesc(enum payload_type_e pt)
