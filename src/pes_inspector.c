@@ -496,7 +496,7 @@ static int rc_count = 0;
         ret = avcodec_receive_frame(cc, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             return;
-		}
+	}
         else if (ret < 0) {
             fprintf(stderr, "%s() Error during decoding\n", __func__);
 			return;

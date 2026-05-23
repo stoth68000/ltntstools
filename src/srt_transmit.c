@@ -38,6 +38,9 @@ struct tool_ctx_s
 	int latency_ms;
 	struct hostent *he;
 	SRT_TRACEBSTATS stats;
+
+	/* re-framer */
+	struct ltntstools_reframer_ctx_s *reframer;
 };
 
 static void signal_handler(int signum)
@@ -122,13 +125,13 @@ static void *sm_cb_pos(void *userContext, uint64_t pos, uint64_t max, double pct
 	return NULL;
 }
 
-/* Called by the rate controlled file transfer player, to give us packets.
+/* Called by the reframer, to give us packets.
  */
-static void * sm_cb_raw(void *userContext, const uint8_t *pkts, int packetCount)
+static void *reframer_cb(void *userContext, const uint8_t *pkts, int lengthBytes)
 {
 	struct tool_ctx_s *ctx = userContext;
 
-	int nb = srt_sendmsg(ctx->skt, (const char *)pkts, packetCount * 188, -1, 1);
+	int nb = srt_sendmsg(ctx->skt, (const char *)pkts, lengthBytes, -1, 1);
 	if (nb < 0) {
 		fprintf(stderr, "Failure to send message, re-opening the connection\n");
 		tool_srt_reopen(ctx);
@@ -143,6 +146,16 @@ static void * sm_cb_raw(void *userContext, const uint8_t *pkts, int packetCount)
 		ltn_histogram_interval_print(STDOUT_FILENO, ctx->h, 1);
 	}
 
+	return NULL;
+}
+
+/* Called by the rate controlled file transfer player, to give us packets.
+ */
+static void * sm_cb_raw(void *userContext, const uint8_t *pkts, int packetCount)
+{
+	struct tool_ctx_s *ctx = (struct tool_ctx_s *)userContext;
+
+	ltststools_reframer_write(ctx->reframer, pkts, packetCount * 188);
 	return NULL;
 }
 
@@ -162,11 +175,13 @@ static void _usage(const char *prog)
 	
 }
 
+
 int srt_transmit(int argc, char* argv[])
 {
 	struct tool_ctx_s s_ctx, *ctx = &s_ctx;
 	memset(ctx, 0, sizeof(*ctx));
 	ctx->fileLoops = 0;
+	ctx->reframer = ltntstools_reframer_alloc(ctx, 7 * 188, (ltntstools_reframer_callback)reframer_cb);
 
 	int ch;
 
@@ -315,6 +330,11 @@ int srt_transmit(int argc, char* argv[])
 	ltntstools_source_rcts_free(ctx->sm);
 	tool_srt_close(ctx);
 	srt_cleanup();
+
+	if (ctx->reframer) {
+		ltntstools_reframer_free(ctx->reframer);
+		ctx->reframer = NULL;
+	}
 
 	if (ctx->verbose) {
 		printf("\n");
