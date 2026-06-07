@@ -327,11 +327,15 @@ static void *ui_thread_func(void *p)
 				mvprintw(streamCount + 2, 0, " -> Clock Report (working)");
 				int j = 0;
 				for (int i = 0; i < MAX_PID; i++) {
-					if (!di->stats->pids[i].enabled)
+					struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, i);
+					if (!pid)
 						continue;
-					if (!di->stats->pids[i].hasPCR)
+
+					if (!pid->enabled)
 						continue;
-					if (!di->stats->pids[i].pcrTickIntervals)
+					if (!pid->hasPCR)
+						continue;
+					if (!pid->pcrTickIntervals)
 						continue;
 
 					if (j++ == 0) {
@@ -346,7 +350,7 @@ static void *ui_thread_func(void *p)
 					 */
 
 					char *s;
-					ltn_histogram_interval_print_buf(&s, di->stats->pids[i].pcrTickIntervals, 0);
+					ltn_histogram_interval_print_buf(&s, pid->pcrTickIntervals, 0);
 					if (s) {
 						char *buf = s;
 
@@ -364,7 +368,7 @@ static void *ui_thread_func(void *p)
 					}
 					streamCount++;
 
-					ltn_histogram_interval_print_buf(&s, di->stats->pids[i].pcrWallDrift, 0);
+					ltn_histogram_interval_print_buf(&s, pid->pcrWallDrift, 0);
 					if (s) {
 						char *buf = s;
 
@@ -413,7 +417,10 @@ static void *ui_thread_func(void *p)
 					mvprintw(streamCount + 2, 0, " -> PID Report not available for unidentified byte streams");
 				}
 				for (int i = 0; i < MAX_PID; i++) {
-					if (di->stats->pids[i].enabled) {
+					struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, i);
+					if (!pid)
+						continue;
+					if (pid->enabled) {
 						streamCount++;
 #if 0
 						uint64_t oof_count = ltntstools_pid_stats_stream_get_reorder_errors(di->stats);
@@ -432,8 +439,8 @@ static void *ui_thread_func(void *p)
 							i,
 							i,
 							ltntstools_pid_stats_pid_get_mbps(di->stats, i),
-							di->stats->pids[i].packetCount,
-							di->stats->pids[i].ccErrors);
+							ltntstools_pid_stats_pid_get_packet_count(di->stats, i),
+							ltntstools_pid_stats_pid_get_cc_errors(di->stats, i));
 					}
 				}
 
@@ -797,12 +804,15 @@ static void *ui_thread_func(void *p)
 
 						if (0) {
 							streamCount++;
-							mvprintw(streamCount + 2, 52, "PCR Drift (us): %7" PRIi64 ", %" PRIi64 " %" PRIi64 " %" PRIi64,
-								di->stats->pids[m->programs[p].pmt.PCR_PID].clocks[ltntstools_CLOCK_PCR].drift_us,
-								di->stats->pids[m->programs[p].pmt.PCR_PID].clocks[ltntstools_CLOCK_PCR].drift_us_lwm,
-								di->stats->pids[m->programs[p].pmt.PCR_PID].clocks[ltntstools_CLOCK_PCR].drift_us_hwm,
-								di->stats->pids[m->programs[p].pmt.PCR_PID].clocks[ltntstools_CLOCK_PCR].drift_us_max
-								);
+							struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, m->programs[p].pmt.PCR_PID);
+							if (pid) {
+								mvprintw(streamCount + 2, 52, "PCR Drift (us): %7" PRIi64 ", %" PRIi64 " %" PRIi64 " %" PRIi64,
+									pid->clocks[ltntstools_CLOCK_PCR].drift_us,
+									pid->clocks[ltntstools_CLOCK_PCR].drift_us_lwm,
+									pid->clocks[ltntstools_CLOCK_PCR].drift_us_hwm,
+									pid->clocks[ltntstools_CLOCK_PCR].drift_us_max
+									);
+							}
 						}
 
 						if (m->programs[p].service_name[0] && m->programs[p].service_provider[0]) {

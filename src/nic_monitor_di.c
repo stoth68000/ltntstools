@@ -603,14 +603,17 @@ void discovered_item_json_summary(struct tool_context_s *ctx, struct discovered_
 	json_object *array = json_object_new_array();
 
 	for (int i = 0; i < MAX_PID; i++) {
-		if (di->stats->pids[i].enabled == 0)
+		struct ltntstools_pid_statistics_s *pidobj = ltntstools_pid_stats_get(di->stats, i);
+		if (!pidobj)
+			continue;
+		if (pidobj->enabled == 0)
 			continue;
 
 		char pidstr[64];
 		sprintf(pidstr, "0x%04x", i);
 		json_object *pid = json_object_new_string(pidstr);
-		json_object *pc = json_object_new_int64(di->stats->pids[i].packetCount);
-		json_object *cc = json_object_new_int64(di->stats->pids[i].ccErrors);
+		json_object *pc = json_object_new_int64( ltntstools_pid_stats_pid_get_packet_count(di->stats, i));
+		json_object *cc = json_object_new_int64( ltntstools_pid_stats_pid_get_cc_errors(di->stats, i));
 		json_object *mbps = json_object_new_double(ltntstools_pid_stats_pid_get_mbps(di->stats, i));
 
 		json_object *item = json_object_new_object();
@@ -906,12 +909,15 @@ void discovered_item_fd_per_pid_report(struct tool_context_s *ctx, struct discov
 		payloadTypeDesc(di->payloadType));
 	dprintf(fd, "<---------------------------  ----------- ------------ ---Mb/ps------------------------------------------------>\n");
 	for (int i = 0; i < MAX_PID; i++) {
-		if (di->stats->pids[i].enabled) {
+		struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, i);
+		if (!pid)
+			continue;
+		if (pid->enabled) {
 			dprintf(fd, "0x%04x (%4d) %14" PRIu64 " %12" PRIu64 "%s%12" PRIu64 "   %6.2f\n", i, i,
-				di->stats->pids[i].packetCount,
-				di->stats->pids[i].ccErrors,
-				di->stats->pids[i].ccErrors != di->statsToFileSummary->pids[i].ccErrors ? "!" : " ",
-				di->stats->pids[i].teiErrors,
+				ltntstools_pid_stats_pid_get_packet_count(di->stats, i),
+				ltntstools_pid_stats_pid_get_cc_errors(di->stats, i),
+				ltntstools_pid_stats_pid_get_cc_errors(di->stats, i) != di->statsToFileSummary->pids[i]->ccErrors ? "!" : " ",
+				ltntstools_pid_stats_pid_get_tei_errors(di->stats, i),
 				ltntstools_pid_stats_pid_get_mbps(di->stats, i));
 		}
 	}
