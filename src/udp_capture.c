@@ -182,8 +182,9 @@ static void *thread_func(void *p)
 		attroff(COLOR_PAIR(1));
 
 		int pidcnt = 0;
-		for (int i = 0; i < MAX_PID; i++) {
-			struct ltntstools_pid_statistics_s *pid = &ctx->stream.pids[i];
+
+		struct ltntstools_pid_statistics_s *pid;
+		ltntstools_stats_for_each_pid(ctx->stream, i, pid) {
 			if (!pid->enabled)
 				continue;
 

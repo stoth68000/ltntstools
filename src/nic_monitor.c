@@ -326,9 +326,10 @@ static void *ui_thread_func(void *p)
 				streamCount++;
 				mvprintw(streamCount + 2, 0, " -> Clock Report (working)");
 				int j = 0;
-				for (int i = 0; i < MAX_PID; i++) {
-					struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, i);
-					if (!pid)
+
+				struct ltntstools_pid_statistics_s *pid;
+				ltntstools_stats_for_each_pid(di->stats, i, pid) {
+					if (!pid->enabled)
 						continue;
 
 					if (!pid->enabled)
@@ -416,10 +417,12 @@ static void *ui_thread_func(void *p)
 					streamCount++;
 					mvprintw(streamCount + 2, 0, " -> PID Report not available for unidentified byte streams");
 				}
-				for (int i = 0; i < MAX_PID; i++) {
-					struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, i);
-					if (!pid)
+
+				struct ltntstools_pid_statistics_s *pid;
+				ltntstools_stats_for_each_pid(di->stats, i, pid) {
+					if (!pid->enabled)
 						continue;
+
 					if (pid->enabled) {
 						streamCount++;
 #if 0

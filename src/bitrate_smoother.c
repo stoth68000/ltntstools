@@ -819,17 +819,17 @@ int bitrate_smoother(int argc, char *argv[])
 
 	printf("\nI: PID   PID     PacketCount   CCErrors  TEIErrors\n");
 	printf("----------------------------  --------- ----------\n");
-	for (int i = 0; i < MAX_PID; i++) {	
-		struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(ctx->i_stream, i);
-		if (!pid)
+
+	struct ltntstools_pid_statistics_s *pid;
+	ltntstools_stats_for_each_pid(ctx->i_stream, i, pid) {
+		if (!pid->enabled)
 			continue;
-		if (pid->enabled) {
-			printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
-				ltntstools_pid_stats_pid_get_packet_count(ctx->i_stream, i),
-				ltntstools_pid_stats_pid_get_cc_errors(ctx->i_stream, i),
-				ltntstools_pid_stats_pid_get_tei_errors(ctx->i_stream, i));
-			errCount += ltntstools_pid_stats_pid_get_cc_errors(ctx->i_stream, i);
-		}
+
+		printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
+			ltntstools_pid_stats_pid_get_packet_count(ctx->i_stream, i),
+			ltntstools_pid_stats_pid_get_cc_errors(ctx->i_stream, i),
+			ltntstools_pid_stats_pid_get_tei_errors(ctx->i_stream, i));
+		errCount += ltntstools_pid_stats_pid_get_cc_errors(ctx->i_stream, i);
 	}
 
 	if (ctx->isRTP) {
@@ -837,17 +837,16 @@ int bitrate_smoother(int argc, char *argv[])
 	}
 	printf("O: PID   PID     PacketCount   CCErrors  TEIErrors\n");
 	printf("----------------------------  --------- ----------\n");
-	for (int i = 0; i < MAX_PID; i++) {	
-		struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(ctx->o_stream, i);
-		if (!pid)
+
+	pid = NULL;
+	ltntstools_stats_for_each_pid(ctx->o_stream, i, pid) {
+		if (!pid->enabled)
 			continue;
-		if (pid->enabled) {
-			printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
-				ltntstools_pid_stats_pid_get_packet_count(ctx->o_stream, i),
-				ltntstools_pid_stats_pid_get_cc_errors(ctx->o_stream, i),
-				ltntstools_pid_stats_pid_get_tei_errors(ctx->o_stream, i));
-			errCount += ltntstools_pid_stats_pid_get_cc_errors(ctx->o_stream, i);
-		}
+		printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
+			ltntstools_pid_stats_pid_get_packet_count(ctx->o_stream, i),
+			ltntstools_pid_stats_pid_get_cc_errors(ctx->o_stream, i),
+			ltntstools_pid_stats_pid_get_tei_errors(ctx->o_stream, i));
+		errCount += ltntstools_pid_stats_pid_get_cc_errors(ctx->o_stream, i);
 	}
 
 	ltntstools_pid_stats_free(ctx->i_stream);

@@ -602,11 +602,9 @@ void discovered_item_json_summary(struct tool_context_s *ctx, struct discovered_
 	/* Pids */
 	json_object *array = json_object_new_array();
 
-	for (int i = 0; i < MAX_PID; i++) {
-		struct ltntstools_pid_statistics_s *pidobj = ltntstools_pid_stats_get(di->stats, i);
-		if (!pidobj)
-			continue;
-		if (pidobj->enabled == 0)
+	struct ltntstools_pid_statistics_s *pid;
+	ltntstools_stats_for_each_pid(di->stats, i, pid) {
+		if (!pid->enabled)
 			continue;
 
 		char pidstr[64];
@@ -908,10 +906,9 @@ void discovered_item_fd_per_pid_report(struct tool_context_s *ctx, struct discov
 		ltntstools_pid_stats_stream_get_mbps(di->stats), stream,
 		payloadTypeDesc(di->payloadType));
 	dprintf(fd, "<---------------------------  ----------- ------------ ---Mb/ps------------------------------------------------>\n");
-	for (int i = 0; i < MAX_PID; i++) {
-		struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(di->stats, i);
-		if (!pid)
-			continue;
+
+	struct ltntstools_pid_statistics_s *pid;
+	ltntstools_stats_for_each_pid(di->stats, i, pid) {
 		if (pid->enabled) {
 			dprintf(fd, "0x%04x (%4d) %14" PRIu64 " %12" PRIu64 "%s%12" PRIu64 "   %6.2f\n", i, i,
 				ltntstools_pid_stats_pid_get_packet_count(di->stats, i),
