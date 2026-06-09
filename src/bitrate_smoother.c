@@ -110,7 +110,9 @@ static int smoother_pcr_cb(void *userContext, unsigned char *buf, int byteCount,
 	}
 	for (int i = 0; i < byteCount; i += 188) {
 		uint16_t pidnr = ltntstools_pid(buf + i);
-		struct ltntstools_pid_statistics_s *pid = &ctx->o_stream->pids[pidnr];
+		struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(ctx->o_stream, pidnr);
+		if (!pid)
+			continue;
 
 		pid->enabled = 1;
 		pid->packetCount++;
@@ -211,7 +213,9 @@ static void *packet_cb(struct tool_context_s *ctx, unsigned char *buf, int byteC
 {
 	for (int i = 0; i < byteCount; i += 188) {
 		uint16_t pidnr = ltntstools_pid(buf + i);
-		struct ltntstools_pid_statistics_s *pid = &ctx->i_stream->pids[pidnr];
+		struct ltntstools_pid_statistics_s *pid = ltntstools_pid_stats_get(ctx->i_stream, pidnr);
+		if (!pid)
+			continue;
 
 		pid->enabled = 1;
 		pid->packetCount++;
@@ -815,14 +819,17 @@ int bitrate_smoother(int argc, char *argv[])
 
 	printf("\nI: PID   PID     PacketCount   CCErrors  TEIErrors\n");
 	printf("----------------------------  --------- ----------\n");
-	for (int i = 0; i < MAX_PID; i++) {	
-		if (ctx->i_stream->pids[i].enabled) {
-			printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
-				ctx->i_stream->pids[i].packetCount,
-				ctx->i_stream->pids[i].ccErrors,
-				ctx->i_stream->pids[i].teiErrors);
-			errCount += ctx->i_stream->pids[i].ccErrors;
-		}
+
+	struct ltntstools_pid_statistics_s *pid;
+	ltntstools_stats_for_each_pid(ctx->i_stream, i, pid) {
+		if (!pid->enabled)
+			continue;
+
+		printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
+			ltntstools_pid_stats_pid_get_packet_count(ctx->i_stream, i),
+			ltntstools_pid_stats_pid_get_cc_errors(ctx->i_stream, i),
+			ltntstools_pid_stats_pid_get_tei_errors(ctx->i_stream, i));
+		errCount += ltntstools_pid_stats_pid_get_cc_errors(ctx->i_stream, i);
 	}
 
 	if (ctx->isRTP) {
@@ -830,14 +837,16 @@ int bitrate_smoother(int argc, char *argv[])
 	}
 	printf("O: PID   PID     PacketCount   CCErrors  TEIErrors\n");
 	printf("----------------------------  --------- ----------\n");
-	for (int i = 0; i < MAX_PID; i++) {	
-		if (ctx->o_stream->pids[i].enabled) {
-			printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
-				ctx->o_stream->pids[i].packetCount,
-				ctx->o_stream->pids[i].ccErrors,
-				ctx->o_stream->pids[i].teiErrors);
-			errCount += ctx->o_stream->pids[i].ccErrors;
-		}
+
+	pid = NULL;
+	ltntstools_stats_for_each_pid(ctx->o_stream, i, pid) {
+		if (!pid->enabled)
+			continue;
+		printf("0x%04x (%4d) %14" PRIu64 " %10" PRIu64 " %10" PRIu64 "\n", i, i,
+			ltntstools_pid_stats_pid_get_packet_count(ctx->o_stream, i),
+			ltntstools_pid_stats_pid_get_cc_errors(ctx->o_stream, i),
+			ltntstools_pid_stats_pid_get_tei_errors(ctx->o_stream, i));
+		errCount += ltntstools_pid_stats_pid_get_cc_errors(ctx->o_stream, i);
 	}
 
 	ltntstools_pid_stats_free(ctx->i_stream);

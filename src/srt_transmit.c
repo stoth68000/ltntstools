@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <sys/time.h>
 
 #include <libltntstools/ltntstools.h>
 #include "ffmpeg-includes.h"
@@ -14,6 +15,7 @@
 #include "utils.h"
 
 static int g_running = 0;
+static volatile sig_atomic_t stats_timer_expired = 0;
 
 struct tool_ctx_s
 {
@@ -33,13 +35,22 @@ struct tool_ctx_s
 	char *streamId;
 	char hostname[96];
 	int port;
+	int latency_ms;
 	struct hostent *he;
 	SRT_TRACEBSTATS stats;
+
+	/* re-framer */
+	struct ltntstools_reframer_ctx_s *reframer;
 };
 
 static void signal_handler(int signum)
 {
 	g_running = 0;
+}
+
+static void stats_timer_handler(int signum)
+{
+	stats_timer_expired = 1;
 }
 
 static void tool_srt_close(struct tool_ctx_s *ctx)
@@ -71,8 +82,11 @@ static int tool_srt_reopen(struct tool_ctx_s *ctx)
 	if (ctx->passPhrase) {
 		srt_setsockflag(ctx->skt, SRTO_PASSPHRASE, ctx->passPhrase, strlen(ctx->passPhrase));
 	}
+	if (ctx->latency_ms > 0) {
+		srt_setsockflag(ctx->skt, SRTO_LATENCY, &ctx->latency_ms, sizeof(ctx->latency_ms));
+	}
 
-	/* Don't linger and block when _clsoe is called, do an immediate terminate. */
+	/* Don't linger and block when _close is called, do an immediate terminate. */
 	uint32_t v = 0;
 	srt_setsockflag(ctx->skt, SO_LINGER, &v, sizeof(v));
 
@@ -96,7 +110,7 @@ static void *sm_cb_pos(void *userContext, uint64_t pos, uint64_t max, double pct
 	struct tool_ctx_s *ctx = userContext;
 	ctx->fileLoopPct = pct;
 	printf("Complete: %6.2f%%\r", pct);
-	fflush(0);
+	fflush(stdout);
 
 	if (pct >= 100.0L && ctx->fileLoops == 0) {
 		/* Shutdown the playout. */
@@ -111,13 +125,13 @@ static void *sm_cb_pos(void *userContext, uint64_t pos, uint64_t max, double pct
 	return NULL;
 }
 
-/* Called by the rate controlled file transfer player, to give us packets.
+/* Called by the reframer, to give us packets.
  */
-static void * sm_cb_raw(void *userContext, const uint8_t *pkts, int packetCount)
+static void *reframer_cb(void *userContext, const uint8_t *pkts, int lengthBytes)
 {
 	struct tool_ctx_s *ctx = userContext;
 
-	int nb = srt_sendmsg(ctx->skt, (const char *)pkts, packetCount * 188, -1, 1);
+	int nb = srt_sendmsg(ctx->skt, (const char *)pkts, lengthBytes, -1, 1);
 	if (nb < 0) {
 		fprintf(stderr, "Failure to send message, re-opening the connection\n");
 		tool_srt_reopen(ctx);
@@ -135,6 +149,16 @@ static void * sm_cb_raw(void *userContext, const uint8_t *pkts, int packetCount)
 	return NULL;
 }
 
+/* Called by the rate controlled file transfer player, to give us packets.
+ */
+static void * sm_cb_raw(void *userContext, const uint8_t *pkts, int packetCount)
+{
+	struct tool_ctx_s *ctx = (struct tool_ctx_s *)userContext;
+
+	ltststools_reframer_write(ctx->reframer, pkts, packetCount * 188);
+	return NULL;
+}
+
 static void _usage(const char *prog)
 {
 	printf("A tool to playout PCR rate controlled ISO13818-1 SPTS/MPTS transport files to a remote SRT receiver.\n");
@@ -145,17 +169,23 @@ static void _usage(const char *prog)
 	printf("  -o srt://host:port [mandatory]\n");
 	printf("  -p SRT encryption passphrase (min 10 chars max 79) [optional]\n");
 	printf("  -s <srt streamid> [optional]\n");
+	printf("  -t <latency_ms> SRT latency in milliseconds [optional]\n\n");
+	printf("     Eg. -i tsfile.ts -o srt://server:port -s <streamid>\n");
+
+	
 }
+
 
 int srt_transmit(int argc, char* argv[])
 {
 	struct tool_ctx_s s_ctx, *ctx = &s_ctx;
 	memset(ctx, 0, sizeof(*ctx));
 	ctx->fileLoops = 0;
+	ctx->reframer = ltntstools_reframer_alloc(ctx, 7 * 188, (ltntstools_reframer_callback)reframer_cb);
 
 	int ch;
 
-	while ((ch = getopt(argc, argv, "?hi:vlo:p:s:")) != -1) {
+	while ((ch = getopt(argc, argv, "?hi:vlo:p:s:t:")) != -1) {
 		switch(ch) {
 		case 'i':
 			if (ctx->filename)
@@ -198,6 +228,13 @@ int srt_transmit(int argc, char* argv[])
 				free(ctx->streamId);
 			ctx->streamId = strdup(optarg);
 			break;
+		case 't':
+			ctx->latency_ms = atoi(optarg);
+			if (ctx->latency_ms < 0) {
+				fprintf(stderr, "Latency must be non-negative, aborting.\n");
+				exit(1);
+			}
+			break;
 		case 'v':
 			ctx->verbose++;
 			break;
@@ -209,15 +246,26 @@ int srt_transmit(int argc, char* argv[])
 		}
 	}
 
+	if (ctx->filename == 0) {
+		_usage(argv[0]);
+		fprintf(stderr, "\n-i is mandatory, aborting\n\n");
+		exit(1);
+	}
+
 	if (ctx->port == 0) {
-		fprintf(stderr, "-o srt://host:port is mandatory, aborting\n");
+		_usage(argv[0]);
+		fprintf(stderr, "\n-o srt://host:port is mandatory, aborting\n\n");
 		exit(1);
 	}
 
 	printf("\nStream Encryption : %s\n", ctx->passPhrase ? "on" : "off");
 	printf("   Stream Path/ID : %s\n", ctx->streamId ? ctx->streamId : "<disabled>");
+	printf("         Latency : %d ms\n", ctx->latency_ms > 0 ? ctx->latency_ms : 0);
 
-	ltn_histogram_alloc_video_defaults(&ctx->h, "SRT transmit intervals");
+	if (ltn_histogram_alloc_video_defaults(&ctx->h, "SRT transmit intervals") < 0) {
+		fprintf(stderr, "Unable to allocate histogram, aborting.\n");
+		exit(1);
+	}
 
 	/* See
 	 * https://github.com/hwangsaeul/libsrt/blob/master/docs/API.md#setup-and-teardown
@@ -225,7 +273,10 @@ int srt_transmit(int argc, char* argv[])
 	srt_startup();
 
 	/* Setup the srt outbound connection */
-	tool_srt_reopen(ctx);
+	if (tool_srt_reopen(ctx) < 0) {
+		fprintf(stderr, "Unable to establish initial SRT connection, aborting.\n");
+		exit(1);
+	}
 
 	/* Configure the rate controlled TS framework */
 	struct ltntstools_source_rcts_callbacks_s sm_callbacks = { 0 };
@@ -240,32 +291,50 @@ int srt_transmit(int argc, char* argv[])
 
 	/* Sit in a loop, waiting for a ctrl-c signal, or for playout to naturally stop */
 	signal(SIGINT, signal_handler);
+	signal(SIGALRM, stats_timer_handler);
+
+	/* Setup periodic timer for statistics reporting (every 5 seconds) */
+	struct itimerval timer = { 0 };
+	timer.it_value.tv_sec = 5;
+	timer.it_interval.tv_sec = 5;
+	setitimer(ITIMER_REAL, &timer, NULL);
+
 	g_running = 1;
-	int timeout = 2000;
 	while (g_running) {
-		usleep(50 * 1000);
-		timeout -= 50;
-		if (timeout < 0) {
-			timeout = 5000;
+		usleep(100 * 1000);  /* 100ms sleep, interrupted by SIGALRM */
+
+		if (stats_timer_expired) {
+			stats_timer_expired = 0;
 
 			/* https://github.com/hwangsaeul/libsrt/blob/master/docs/statistics.md#mbpsSendRate */
 			if (srt_bistats(ctx->skt, &ctx->stats, 0, 1) == 0) {
-				printf("\nMb/ps: %7.02f\tBytes: %12" PRIu64 "\tRTT: %7.0f\tSendLoss: %8d\tSendDrop: %8d\tRetrans: %8d\n",
+				printf("\nMb/ps: %7.02f\tBytes: %12" PRIu64 "\tRTT: %7.0f\tSendLoss: %8d\tSendDrop: %8d\tRetrans: %8d\tLatency: %5d\n",
 					ctx->stats.mbpsSendRate,
 					ctx->stats.byteSentTotal,
 					ctx->stats.msRTT,
 					ctx->stats.pktSndLossTotal,
 					ctx->stats.pktSndDropTotal,
-					ctx->stats.pktRetransTotal);
+					ctx->stats.pktRetransTotal,
+					ctx->stats.msSndTsbPdDelay);
 			}
 		}
 	}
+
+	/* Cleanup: stop the timer */
+	memset(&timer, 0, sizeof(timer));
+	setitimer(ITIMER_REAL, &timer, NULL);
+
 	printf("\n");
 
 	/* Teardown */
 	ltntstools_source_rcts_free(ctx->sm);
 	tool_srt_close(ctx);
 	srt_cleanup();
+
+	if (ctx->reframer) {
+		ltntstools_reframer_free(ctx->reframer);
+		ctx->reframer = NULL;
+	}
 
 	if (ctx->verbose) {
 		printf("\n");
