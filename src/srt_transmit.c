@@ -294,7 +294,7 @@ int srt_transmit(int argc, char* argv[])
 	signal(SIGALRM, stats_timer_handler);
 
 	/* Setup periodic timer for statistics reporting (every 5 seconds) */
-	struct itimerval timer = { 0 };
+	struct itimerval timer = { { 0, 0 }, { 0, 0 } };
 	timer.it_value.tv_sec = 5;
 	timer.it_interval.tv_sec = 5;
 	setitimer(ITIMER_REAL, &timer, NULL);
