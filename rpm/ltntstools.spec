@@ -65,9 +65,17 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
 #/usr/local/lib-ltntstools/libntt.so.0
 
 %changelog
+* Tue Jun  9 2026 Steven Toth <steven.toth@ltnglobal.com> 
+- v1.39.12 - DEVELOPMENT
+  tstools_nic_monitor: Much smaller memory usages
+  tstools_nic_monitor: Less CPU, performance improvements
+  tstools_nic_monitor: Updates and optimizations based on upgraded libltntstools
+  tstools_bitrate_smoother: Updates and optimizations based on upgraded libltntstools
+
 * Fri May 22 2026 Steven Toth <steven.toth@ltnglobal.com> 
 - v1.39.12
   tstools_nielsen_inspector: don't segfault if we can't convert a media sample
+  tstools_nielsen_inspector: deail with odd MP2 stream that reports fltp foramt but decodes as s16p
 
 * Fri May 22 2026 Steven Toth <steven.toth@ltnglobal.com> 
 - v1.39.11

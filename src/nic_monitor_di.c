@@ -910,10 +910,11 @@ void discovered_item_fd_per_pid_report(struct tool_context_s *ctx, struct discov
 	struct ltntstools_pid_statistics_s *pid;
 	ltntstools_stats_for_each_pid(di->stats, i, pid) {
 		if (pid->enabled) {
+
 			dprintf(fd, "0x%04x (%4d) %14" PRIu64 " %12" PRIu64 "%s%12" PRIu64 "   %6.2f\n", i, i,
 				ltntstools_pid_stats_pid_get_packet_count(di->stats, i),
 				ltntstools_pid_stats_pid_get_cc_errors(di->stats, i),
-				ltntstools_pid_stats_pid_get_cc_errors(di->stats, i) != di->statsToFileSummary->pids[i]->ccErrors ? "!" : " ",
+				ltntstools_pid_stats_pid_get_cc_errors(di->stats, i) != ltntstools_pid_stats_pid_get_cc_errors(di->statsToFileSummary, i) ? "!" : " ",
 				ltntstools_pid_stats_pid_get_tei_errors(di->stats, i),
 				ltntstools_pid_stats_pid_get_mbps(di->stats, i));
 		}
@@ -1070,9 +1071,9 @@ void discovered_item_detailed_file_summary(struct tool_context_s *ctx, struct di
 		ctx->ifname,
 		bps,
 		mbps,
-		di->stats->packetCount,
-		di->stats->ccErrors,
-		di->stats->ccErrors != di->statsToFileDetailed_ccErrors ? "!" : "",
+		ltntstools_pid_stats_stream_get_packet_count(di->stats),
+		ltntstools_pid_stats_stream_get_cc_errors(di->stats),
+		ltntstools_pid_stats_stream_get_cc_errors(di->stats) != di->statsToFileDetailed_ccErrors ? "!" : "",
 		di->srcaddr,
 		di->dstaddr,
 		ctx->pcap_stats.ps_drop,
@@ -1193,9 +1194,9 @@ void discovered_item_file_summary(struct tool_context_s *ctx, struct discovered_
 		ctx->ifname,
 		bps,
 		mbps,
-		di->stats->packetCount,
-		di->stats->ccErrors,
-		di->stats->ccErrors != di->statsToFileSummary->ccErrors ? "!" : "",
+		ltntstools_pid_stats_stream_get_packet_count(di->stats),
+		ltntstools_pid_stats_stream_get_cc_errors(di->stats),
+		ltntstools_pid_stats_stream_get_cc_errors(di->stats) != ltntstools_pid_stats_stream_get_cc_errors(di->statsToFileSummary) ? "!" : "",
 		di->srcaddr,
 		di->dstaddr,
 		ctx->pcap_stats.ps_drop,
