@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <ctype.h>
+#include <libltntstools/ts.h>
 
 #include "dump.h"
 
@@ -42,38 +43,6 @@ int tstools_ReadPacket(int fd, uint8_t *dst)
 	}
 
 	return (i == 0) ? true : false;
-}
-
-char *tstools_GetTypeName(uint8_t type)
-{
-  switch (type)
-    {
-    case 0x00: return "Reserved";
-    case 0x01: return "ISO/IEC 11172 Video";
-    case 0x02: return "ISO/IEC 13818-2 Video";
-    case 0x03: return "ISO/IEC 11172 Audio";
-    case 0x04: return "ISO/IEC 13818-3 Audio";
-    case 0x05: return "ISO/IEC 13818-1 Private Section";
-    case 0x06: return "ISO/IEC 13818-1 Private PES data packets";
-    case 0x07: return "ISO/IEC 13522 MHEG";
-    case 0x08: return "ISO/IEC 13818-1 Annex A DSM CC";
-    case 0x09: return "H222.1";
-    case 0x0A: return "ISO/IEC 13818-6 type A";
-    case 0x0B: return "ISO/IEC 13818-6 type B";
-    case 0x0C: return "ISO/IEC 13818-6 type C";
-    case 0x0D: return "ISO/IEC 13818-6 type D";
-    case 0x0E: return "ISO/IEC 13818-1 auxillary";
-    case 0x0F: return "ISO/IEC 13818-7 Audio with ADTS transport syntax - usually AAC";
-    case 0x1B: return "H.264 Video";
-    case 0x24: return "H.265 Video";
-    case 0x32: return "JPEG-XS Video";
-    case 0x81: return "ATSC AC-3 Audio";
-    default:
-      if (type < 0x80)
-        return "ISO/IEC 13818-1 reserved";
-      else
-        return "User Private";
-    }
 }
 
 static void DumpSmoothingDescriptor(dvbpsi_smoothing_buffer_dr_t *d)
@@ -368,7 +337,7 @@ void tstools_DumpPMT(void *p_zero, dvbpsi_pmt_t *p_pmt, int dumpDescriptors, uin
       es_position++,
       p_es->i_type,
       p_es->i_pid, p_es->i_pid,
-      tstools_GetTypeName(p_es->i_type));
+      ltntstools_GetESPayloadTypeDescription(p_es->i_type));
     if (dumpDescriptors)
       tstools_DumpDescriptors("         -> es descriptors ", p_es->p_first_descriptor);
     p_es = p_es->p_next;
