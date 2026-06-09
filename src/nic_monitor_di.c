@@ -497,8 +497,8 @@ void discovered_item_json_summary(struct tool_context_s *ctx, struct discovered_
 	json_object *fmbps = json_object_new_double(ltntstools_pid_stats_stream_get_mbps(di->stats));
 	json_object *ftype = json_object_new_string(payloadTypeDesc(di->payloadType));
 	json_object *nic = json_object_new_string(ctx->ifname);
-	json_object *fccerr = json_object_new_int64(di->stats->ccErrors);
-	json_object *fpkts = json_object_new_int64(di->stats->packetCount);
+	json_object *fccerr = json_object_new_int64( ltntstools_pid_stats_stream_get_cc_errors(di->stats) );
+	json_object *fpkts = json_object_new_int64( ltntstools_pid_stats_stream_get_packet_count(di->stats) );
 	json_object *fpsdrop = json_object_new_int64(ctx->pcap_stats.ps_drop);
 	json_object *fifdrop = json_object_new_int64(ctx->pcap_stats.ps_ifdrop);
 
@@ -1251,7 +1251,7 @@ void discovered_items_file_detailed(struct tool_context_s *ctx, int write_banner
 		 * file records, of the CC counts have changed, we
 		 * do something significant in the file records.
 		 */
-		e->statsToFileDetailed_ccErrors = e->stats->ccErrors;
+		e->statsToFileDetailed_ccErrors = ltntstools_pid_stats_stream_get_cc_errors(e->stats);
 	}
 	pthread_mutex_unlock(&ctx->lock);
 }

@@ -359,13 +359,13 @@ static void _processPackets_Stats(struct tool_context_s *ctx,
 			}
 		}
 
-		if (di->stats->ccErrors != di->statsToUI_ccErrors) {
+		if (ltntstools_pid_stats_stream_get_cc_errors(di->stats) != di->statsToUI_ccErrors) {
 			if (di->lastStreamCCError != now) {
 				di->lastStreamCCError = now;
 				display_doc_append_cc_error(&di->doc_stream_log, 0, NULL);
 			}
 // SEGFAULT
-			di->statsToUI_ccErrors = di->stats->ccErrors;
+			di->statsToUI_ccErrors = ltntstools_pid_stats_stream_get_cc_errors(di->stats);
 			/* Cache current stats so we can compare the next time around. */
 		}
 

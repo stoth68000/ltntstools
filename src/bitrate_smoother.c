@@ -115,11 +115,11 @@ static int smoother_pcr_cb(void *userContext, unsigned char *buf, int byteCount,
 			continue;
 
 		pid->enabled = 1;
-		pid->packetCount++;
+		pid->internal_packetCount++; /* TODO: don't reference internal vars */
 
 		uint8_t cc = ltntstools_continuity_counter(buf + i);
 		if (ltntstools_isCCInError(buf + i, pid->lastCC)) {
-			if (pid->packetCount > 1 && pidnr != 0x1fff) {
+			if (pid->internal_packetCount > 1 && pidnr != 0x1fff) { /* TODO: don't reference internal vars */
 				char ts[256];
 				time_t now = time(0);
 				sprintf(ts, "%s", ctime(&now));
@@ -135,7 +135,7 @@ static int smoother_pcr_cb(void *userContext, unsigned char *buf, int byteCount,
 					*(buf + i + 6),
 					*(buf + i + 7)
 				);
-				pid->ccErrors++;
+				pid->internal_ccErrors++; /* TODO: don't reference internal vars */
 			}
 		}
 
@@ -218,11 +218,11 @@ static void *packet_cb(struct tool_context_s *ctx, unsigned char *buf, int byteC
 			continue;
 
 		pid->enabled = 1;
-		pid->packetCount++;
+		pid->internal_packetCount++; /* TODO: don't reference internal vars */
 
 		uint8_t cc = ltntstools_continuity_counter(buf + i);
 		if (ltntstools_isCCInError(buf + i, pid->lastCC)) {
-			if (pid->packetCount > 1 && pidnr != 0x1fff) {
+			if (pid->internal_packetCount > 1 && pidnr != 0x1fff) { /* TODO: don't reference internal vars */
 				char ts[256];
 				time_t now = time(0);
 				sprintf(ts, "%s", ctime(&now));
@@ -238,7 +238,7 @@ static void *packet_cb(struct tool_context_s *ctx, unsigned char *buf, int byteC
 					*(buf + i + 6),
 					*(buf + i + 7)
 				);
-				pid->ccErrors++;
+				pid->internal_ccErrors++; /* TODO: don't reference internal vars */
 			}
 		}
 

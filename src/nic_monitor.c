@@ -149,7 +149,7 @@ static void *ui_thread_func(void *p)
 				di->payloadType = PAYLOAD_BYTE_STREAM;
 			}
 
-			if (di->stats->ccErrors)
+			if (ltntstools_pid_stats_stream_get_cc_errors(di->stats))
 				discovered_item_state_set(di, DI_STATE_CC_ERROR);
 			else
 				discovered_item_state_clr(di, DI_STATE_CC_ERROR);
@@ -177,8 +177,8 @@ static void *ui_thread_func(void *p)
 					di->srcaddr,
 					di->dstaddr,
 					ltntstools_pid_stats_stream_get_mbps(di->stats),
-					di->stats->packetCount,
-					di->stats->ccErrors,
+					ltntstools_pid_stats_stream_get_packet_count(di->stats),
+					ltntstools_pid_stats_stream_get_cc_errors(di->stats),
 					di->iat_hwm_us / 1000,
 					di->warningIndicatorLabel);
 			} else
@@ -188,8 +188,8 @@ static void *ui_thread_func(void *p)
 					di->srcaddr,
 					di->dstaddr,
 					ltntstools_ctp_stats_stream_get_mbps(di->stats),
-					di->stats->packetCount,
-					di->stats->ccErrors,
+					ltntstools_pid_stats_stream_get_packet_count(di->stats),
+					ltntstools_pid_stats_stream_get_cc_errors(di->stats),
 					di->iat_hwm_us / 1000,
 					di->warningIndicatorLabel);
 				totalMbps += ltntstools_ctp_stats_stream_get_mbps(di->stats);
@@ -202,8 +202,8 @@ static void *ui_thread_func(void *p)
 					di->srcaddr,
 					di->dstaddr,
 					ltntstools_ctp_stats_stream_get_mbps(di->stats),
-					di->stats->packetCount,
-					di->stats->ccErrors,
+					ltntstools_pid_stats_stream_get_packet_count(di->stats),
+					ltntstools_pid_stats_stream_get_cc_errors(di->stats),
 					di->iat_hwm_us / 1000,
 					di->warningIndicatorLabel);
 				totalMbps += ltntstools_ctp_stats_stream_get_mbps(di->stats);
@@ -214,7 +214,7 @@ static void *ui_thread_func(void *p)
 					di->srcaddr,
 					di->dstaddr,
 					ltntstools_bytestream_stats_stream_get_mbps(di->stats),
-					di->stats->packetCount,
+					ltntstools_pid_stats_stream_get_packet_count(di->stats),
 					"-",
 					di->iat_hwm_us / 1000,
 					di->warningIndicatorLabel);
