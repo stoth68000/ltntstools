@@ -360,6 +360,14 @@ static void *thread_packet_rx(void *p)
 			unsigned char *p = buf + i;
 			uint16_t pidnr = ltntstools_pid(buf + i);
 
+                        if (ltntstools_tei_set(p) && pidnr == ctx->pcrPID) {
+                                /* We don't want TEI errors on packets that contain the PCR.
+                                 * In extreme noisy RF streams the bitrate smoothers eventually
+                                 * stalls with the PCR jumping around eratically.
+                                 */
+                                ltntstools_generateNullPacket(p);
+                        }
+
 			/* If the pid is blocked from passing, convert it into a null packet
 			 * before it enters the smoother
 			 */
