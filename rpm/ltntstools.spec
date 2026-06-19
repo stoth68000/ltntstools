@@ -71,6 +71,8 @@ A tool to capture, inspect or monitor MPEG-TS files and streams.
   tstools_nic_monitor: Less CPU, performance improvements
   tstools_nic_monitor: Updates and optimizations based on upgraded libltntstools
   tstools_nic_monitor: Don't access deprecated struct vars, use getters instead
+  tstools_nic_monitor: Large improvement (~5MB) to memory usage after libltntstools PID structure refactoring.
+  tstools_nic_monitor: Switch to using libltntstools getters for many stats metrics
   tstools_bitrate_smoother: Updates and optimizations based on upgraded libltntstools
   tstools_bitrate_smoother: Don't access deprecated struct vars, use getters instead
   tstools_bitrate_smoother: Discard PCR packets if the TEI error bit is set, else risk massive timing discontinuities.
